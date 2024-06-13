@@ -62,7 +62,7 @@ const getRoom = async () => {
 
     room.value = data.room;
 
-    if (room.value.type == "offline") {
+    if (room.value.type == "offline" && !videoStore.videoPath) {
         videoUploadIsRequired.value = true;
         return;
     }

@@ -4,11 +4,13 @@ import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useVideoStore } from "@/stores/video";
 
 const errorMessage = ref("");
 
 const router = useRouter();
 const userStore = useUserStore();
+const videoStore = useVideoStore();
 
 const form = ref({
     username: "",
@@ -96,6 +98,9 @@ const createRoom = () => {
             }
 
             userStore.setUsername(form.value.username);
+
+            if (form.value.roomType == "offline") videoStore.setVideoPath(URL.createObjectURL(videoFile.value.files[0]));
+
             router.push(`/room/${form.value.roomCode.replace(/\s/g, "")}`);
         })
         .catch((_) => (errorMessage.value = "An error occurred. Please try again."));
