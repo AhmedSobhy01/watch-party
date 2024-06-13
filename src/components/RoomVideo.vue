@@ -35,6 +35,14 @@ const currentVideoStats = ref({
     allowEmit: true,
 });
 
+// Update player
+const updatePlayer = () => {
+    player.value.currentTime = currentVideoStats.value.currentTime;
+
+    if (currentVideoStats.value.isPlaying) player.value.play();
+    else player.value.pause();
+};
+
 // Video action message generator
 const messageGenerator = (state, username, context) => {
     const totalSeconds = Math.round(context);
@@ -61,7 +69,7 @@ const bindEvents = () => {
             currentVideoStats.value.currentTime = data.context;
             currentVideoStats.value.allowEmit = false;
 
-            player.value.play();
+            updatePlayer();
 
             emit("appendMessage", {
                 username: "System",
@@ -74,7 +82,7 @@ const bindEvents = () => {
             currentVideoStats.value.currentTime = data.context;
             currentVideoStats.value.allowEmit = false;
 
-            player.value.pause();
+            updatePlayer();
 
             emit("appendMessage", {
                 username: "System",
