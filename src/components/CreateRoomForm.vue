@@ -130,13 +130,13 @@ onMounted(() => {
                     <FontAwesomeIcon :icon="faXmark" />
                 </button>
 
-                <select class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" name="videoType" id="videoType" v-model="form.files[index].type" required>
+                <select class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" v-model="form.files[index].type">
                     <option value="" disabled>Select Source Type</option>
                     <option value="video">Video</option>
                     <option value="caption">Caption</option>
                 </select>
-                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" name="label" placeholder="Source Label" autocomplete="off" required v-model="form.files[index].label" />
-                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" name="videoUrl" placeholder="Source URL" autocomplete="off" required v-model="form.files[index].url" />
+                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" placeholder="Source Label" autocomplete="off" v-model="form.files[index].label" />
+                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" placeholder="Source URL" autocomplete="off" v-model="form.files[index].url" />
             </div>
 
             <button type="button" class="bg-white text-black px-4 py-1.5 rounded-lg text-lg font-medium hover:bg-gray-100 transition-all ease-in-out duration-100 w-full" @click="addFile">Add File</button>
