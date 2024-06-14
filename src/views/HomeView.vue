@@ -1,5 +1,5 @@
 <script setup>
-import LogoMain from "@/components/icons/IconMain.vue";
+import IconMain from "@/components/icons/IconMain.vue";
 
 const appName = import.meta.env.VITE_APP_NAME;
 </script>
@@ -7,7 +7,7 @@ const appName = import.meta.env.VITE_APP_NAME;
 <template>
     <div class="flex flex-col items-center justify-center max-w-sm mx-auto h-screen">
         <div class="flex flex-col items-center gap-5">
-            <LogoMain />
+            <IconMain />
 
             <h1 class="font-bold text-5xl md:text-6xl text-center">{{ appName }}</h1>
         </div>
