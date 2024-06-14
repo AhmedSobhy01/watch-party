@@ -4,6 +4,7 @@ import "plyr/dist/plyr.css";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useSocketStore } from "@/stores/socket";
 import { useVideoStore } from "@/stores/video";
+import { formatTimeFromSeconds } from "@/composables/time";
 
 const props = defineProps({
     roomType: {
@@ -44,22 +45,7 @@ const updatePlayer = () => {
 };
 
 // Video action message generator
-const messageGenerator = (state, username, context) => {
-    const totalSeconds = Math.round(context);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const padTime = (timeUnit) => timeUnit.toString().padStart(2, "0");
-
-    const formattedHours = padTime(hours);
-    const formattedMinutes = padTime(minutes);
-    const formattedSeconds = padTime(seconds);
-
-    const timeString = hours > 0 ? `${formattedHours}:${formattedMinutes}:${formattedSeconds}` : `${formattedMinutes}:${formattedSeconds}`;
-
-    return `${username} ${state} the video at ${timeString}`;
-};
+const messageGenerator = (state, username, context) => `${username} ${state} the video at ${formatTimeFromSeconds(context)}`;
 
 // Bind and unbind socket events
 const bindEvents = () => {

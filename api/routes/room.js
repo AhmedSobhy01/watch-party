@@ -28,7 +28,7 @@ router.post("/create", async (req, res) => {
     } else {
         const videoLength = files[0]?.length;
 
-        if (!videoLength) return res.status(400).send({ message: "Video length is required" });
+        if (!videoLength) return res.status(400).send({ message: "Video file is required" });
 
         room = Room({
             roomName,

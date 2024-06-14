@@ -1,6 +1,6 @@
 <script setup>
 import { useUserStore } from "@/stores/user";
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -41,6 +41,26 @@ const removeFile = (index) => {
 
 // Offline file
 const videoFile = ref(null);
+
+const validateVideoFile = () => {
+    if (form.value.roomType == "offline") {
+        if (!videoFile.value.files[0]) {
+            errorMessage.value = "Please select a video file.";
+            return false;
+        }
+
+        if (videoFile.value.files[0].type.split("/")[0] !== "video") {
+            errorMessage.value = "Please select a video file.";
+            return false;
+        }
+
+        errorMessage.value = "";
+        return true;
+    }
+
+    return false;
+};
+
 const getVideoLength = () => {
     const file = videoFile.value.files[0];
 
@@ -52,6 +72,10 @@ const getVideoLength = () => {
     const video = document.createElement("video");
     video.src = URL.createObjectURL(file);
     video.onloadedmetadata = () => (form.value.videoLength = Math.round(video.duration));
+};
+
+const onChangeVideoFileHandler = () => {
+    if (validateVideoFile()) getVideoLength();
 };
 
 // Form handler
@@ -105,10 +129,6 @@ const createRoom = () => {
         })
         .catch((_) => (errorMessage.value = "An error occurred. Please try again."));
 };
-
-onMounted(() => {
-    videoFile.value.addEventListener("change", getVideoLength);
-});
 </script>
 
 <template>
@@ -148,7 +168,7 @@ onMounted(() => {
         </div>
 
         <div class="border p-5 flex flex-col gap-4" v-show="form.roomType == 'offline'">
-            <input type="file" class="w-full" accept="video/*" @change="getVideoLength" ref="videoFile" />
+            <input type="file" class="w-full" @change="onChangeVideoFileHandler" ref="videoFile" />
         </div>
 
         <p v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</p>
