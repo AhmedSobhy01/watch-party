@@ -18,6 +18,8 @@ const props = defineProps({
 const socketStore = useSocketStore();
 const containerElement = ref(null);
 
+let emojiRemoverInterval;
+
 const playerHeight = ref(0);
 
 const emojis = ref([]);
@@ -25,7 +27,6 @@ const animationDuration = 5000;
 
 // Show emoji
 const showEmoji = (emojiJSON, username) => {
-    console.log(username);
     emojis.value.push({
         id: Date.now(),
         json: emojiJSON,
@@ -68,7 +69,7 @@ const unbindEvents = () => socketStore.socket.off("new-emoji");
 onMounted(() => {
     bindEvents();
 
-    setInterval(() => {
+    emojiRemoverInterval = setInterval(() => {
         // Set player height and animation properties
         playerHeight.value = props.playerContainer.clientHeight;
         document.documentElement.style.setProperty("--float-up-animation-duration", `${animationDuration}ms`);
@@ -81,7 +82,11 @@ onMounted(() => {
     }, 1000);
 });
 
-onBeforeUnmount(() => unbindEvents());
+onBeforeUnmount(() => {
+    unbindEvents();
+
+    clearInterval(emojiRemoverInterval);
+});
 </script>
 
 <template>
