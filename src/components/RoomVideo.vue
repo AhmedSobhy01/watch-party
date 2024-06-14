@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useSocketStore } from "@/stores/socket";
 import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
+import RoomVideoEmojis from "@/components/RoomVideoEmojis.vue";
 
 const props = defineProps({
     roomType: {
@@ -28,6 +29,7 @@ const videoFiles = computed(() => props.files.filter((file) => file.type == "vid
 const captionsFiles = computed(() => props.files.filter((file) => file.type == "caption"));
 
 // Video player
+const playerContainerElement = ref(null);
 const playerElement = ref(null);
 const player = ref(null);
 const currentVideoStats = ref({
@@ -149,7 +151,14 @@ const addCaption = async () => {
 };
 
 onMounted(() => {
-    player.value = new Plyr(playerElement.value);
+    player.value = new Plyr(playerElement.value, {
+        fullscreen: {
+            enabled: true,
+            fallback: true,
+            iosNative: false,
+            container: "#player-container",
+        },
+    });
 
     bindEvents();
 
@@ -166,7 +175,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="relative h-full">
+    <div class="relative h-full overflow-hidden" id="player-container" ref="playerContainerElement">
         <video playsinline controls class="w-full h-full" ref="playerElement">
             <template v-if="roomType == 'online'">
                 <source v-for="file in videoFiles" :key="file.url" :src="file.url" :type="file?.mime ?? 'video/mp4'" />
@@ -183,5 +192,9 @@ onBeforeUnmount(() => {
 
         <input type="file" class="hidden" accept="text/vtt" ref="captionUploadElement" @change="addCaption" />
         <button type="button" class="absolute top-3 right-3 px-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-all ease-in-out duration-100" @click="captionUploadElement.click()" v-if="!currentVideoStats.isPlaying">Add Subtitle</button>
+
+        <div class="absolute bottom-3 right-32 z-50">
+            <RoomVideoEmojis :playerContainer="playerContainerElement" />
+        </div>
     </div>
 </template>

@@ -52,6 +52,8 @@ io.on("connection", (socket) => {
 
     socket.on("send-message", (message) => socket.to(users[socket.id].roomCode).emit("new-message", { message: message, username: users[socket.id].username }));
 
+    socket.on("send-emoji", (emoji) => io.in(users[socket.id].roomCode).emit("new-emoji", { emoji: emoji, username: users[socket.id].username }));
+
     socket.on("leave-room", () => {
         const data = users[socket.id];
         delete users[socket.id];

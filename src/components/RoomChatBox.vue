@@ -2,6 +2,7 @@
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faCircleChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { nextTick, ref, watch } from "vue";
+import EmojisBar from "@/components/EmojisBar.vue";
 
 const props = defineProps({
     messages: {
@@ -57,12 +58,15 @@ const sendMessage = () => {
             </div>
         </div>
 
-        <form class="relative w-full overflow-hidden" @submit.prevent="sendMessage">
-            <input class="pl-3 pr-12 py-2 rounded-lg text-gray-800 outline-none w-full" type="text" placeholder="Message" autocomplete="off" v-model="messageInput" />
+        <div class="border-t flex flex-col gap-3">
+            <EmojisBar />
 
-            <button type="submit" class="text-gray-600 hover:text-gray-800 transition-all ease-in-out duration-100 text-xl rounded-full flex items-center justify-center absolute right-3 top-1/2 transform -translate-y-1/2">
-                <FontAwesomeIcon class="h-7 w-7" :icon="faCircleChevronRight" />
-            </button>
-        </form>
+            <form class="relative w-full overflow-hidden" @submit.prevent="sendMessage">
+                <input class="pl-3 pr-12 py-2 rounded-lg text-gray-800 outline-none w-full" type="text" placeholder="Message" autocomplete="off" v-model="messageInput" />
+                <button type="submit" class="text-gray-600 hover:text-gray-800 transition-all ease-in-out duration-100 text-xl rounded-full flex items-center justify-center absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <FontAwesomeIcon class="h-7 w-7" :icon="faCircleChevronRight" />
+                </button>
+            </form>
+        </div>
     </div>
 </template>
