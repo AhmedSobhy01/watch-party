@@ -89,7 +89,7 @@ const joinUser = () => {
 
     chatBoxElement.value.appendMessage({
         username: "System",
-        text: `Welcome ${room.value.name}! Enjoy your stay in the room.`,
+        text: `Welcome to ${room.value.name}! Enjoy your stay in the room.`,
     });
 };
 

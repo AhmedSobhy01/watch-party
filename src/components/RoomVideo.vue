@@ -38,7 +38,17 @@ const currentVideoStats = ref({
     isPlaying: false,
     lastEmitAt: 0,
 });
-const emitAfter = computed(() => (Date.now() - currentVideoStats.value.lastEmitAt > 500 ? 0 : Date.now() - currentVideoStats.value.lastEmitAt));
+
+// Creates a queue for the emit events
+// 250 ms delay is for detecting dblclick event
+const emitAfter = computed(() => {
+    let delay = 250;
+
+    const diff = Date.now() - currentVideoStats.value.lastEmitAt;
+    if (diff <= 500) delay += diff > 0 ? diff : 500;
+
+    return delay;
+});
 
 // Update player
 const updatePlayer = (isPlaying, context) => {
@@ -87,6 +97,11 @@ const unbindEvents = () => {
 };
 
 // Video player controls handler listener
+const doubleClickStatus = ref({
+    wasDoubleClick: false,
+    shouldBeToggled: false,
+});
+
 const seekingStatus = ref({
     isSeeking: false,
     seekStart: null,
@@ -100,6 +115,14 @@ const videoControlsHandler = (e) => {
         currentVideoStats.value.isPlaying = true;
 
         setTimeout(() => {
+            // If double click, ignore the event since it's a fullscreen toggle
+            if (doubleClickStatus.value.wasDoubleClick) {
+                if (doubleClickStatus.value.shouldBeToggled) doubleClickStatus.value.wasDoubleClick = false;
+                else doubleClickStatus.value.shouldBeToggled = true;
+
+                return;
+            }
+
             socketStore.socket.emit("player-control", { message: "play", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: true });
 
             emit("appendMessage", {
@@ -111,6 +134,14 @@ const videoControlsHandler = (e) => {
         currentVideoStats.value.lastEmitAt = Date.now() + emitAfter.value;
     } else if (e.type == "pause") {
         setTimeout(() => {
+            // If double click, ignore the event since it's a fullscreen toggle
+            if (doubleClickStatus.value.wasDoubleClick) {
+                if (doubleClickStatus.value.shouldBeToggled) doubleClickStatus.value.wasDoubleClick = false;
+                else doubleClickStatus.value.shouldBeToggled = true;
+
+                return;
+            }
+
             currentVideoStats.value.isPlaying = false;
 
             socketStore.socket.emit("player-control", { message: "pause", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: false });
@@ -137,7 +168,7 @@ const videoSeekingHandler = () => {
 };
 
 // Video seeked handler listener
-const videoSeekedHandler = () => {
+const videoSeekedHandler = throttle(() => {
     if (!seekingStatus.value.isSeeking) return;
 
     seekingStatus.value.isSeeking = false;
@@ -158,10 +189,16 @@ const videoSeekedHandler = () => {
 
         currentVideoStats.value.lastEmitAt = Date.now() + emitAfter.value;
     }
-};
+}, 750);
 
 // Update video stats
-const updateVideoStats = () => (currentVideoStats.value.currentTime = player.value.currentTime);
+const updateVideoStats = () => (currentVideoStats.value.currentTime = Math.floor(player.value.currentTime));
+
+// Video double click handler
+const videoDoubleClickHandler = () => {
+    doubleClickStatus.value.wasDoubleClick = true;
+    doubleClickStatus.value.shouldBeToggled = false;
+};
 
 // Add and remove player listeners
 const addPlayerListeners = () => {
@@ -171,6 +208,7 @@ const addPlayerListeners = () => {
     playerElement.value.addEventListener("seeked", videoSeekedHandler, false);
     playerElement.value.addEventListener("loadedmetadata", updateVideoStats, false);
     playerElement.value.addEventListener("playing", updateVideoStats, false);
+    playerContainerElement.value.addEventListener("dblclick", videoDoubleClickHandler, false);
 };
 
 const removePlayerListeners = () => {
@@ -182,6 +220,7 @@ const removePlayerListeners = () => {
     playerElement.value.removeEventListener("seeked", videoSeekedHandler, false);
     playerElement.value.removeEventListener("loadedmetadata", updateVideoStats, false);
     playerElement.value.removeEventListener("playing", updateVideoStats, false);
+    playerContainerElement.value.removeEventListener("dblclick", videoDoubleClickHandler, false);
 };
 
 // Add offline video caption via upload
