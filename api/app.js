@@ -62,6 +62,14 @@ io.on("connection", (socket) => {
 
         const roomUsers = getRoomUsers(data.roomCode);
 
+        // Delete room if no users are left
+        if (Object.keys(roomUsers).length === 0) {
+            const Room = require("./models/Room");
+            Room.deleteOne({ roomCode: data.roomCode }, (err) => {
+                if (err) console.log(err);
+            });
+        }
+
         socket.to(data.roomCode).emit("user-left", { username: data.username, members: Object.keys(roomUsers).length });
     });
 
@@ -72,6 +80,14 @@ io.on("connection", (socket) => {
         if (!data) return;
 
         const roomUsers = getRoomUsers(data.roomCode);
+
+        // Delete room if no users are left
+        if (Object.keys(roomUsers).length === 0) {
+            const Room = require("./models/Room");
+            Room.deleteOne({ roomCode: data.roomCode }, (err) => {
+                if (err) console.log(err);
+            });
+        }
 
         socket.to(data.roomCode).emit("user-left", { username: data.username, members: Object.keys(roomUsers).length });
     });
