@@ -71,22 +71,31 @@ const bindEvents = () => {
 
         if (data.message == "play") {
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("played", data.username, data.context),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("played", data.username, data.context),
+                },
             });
         }
 
         if (data.message == "pause") {
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("paused", data.username, data.context),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("paused", data.username, data.context),
+                },
             });
         }
 
         if (data.message == "seek") {
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("seeked", data.username, data.context),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("seeked", data.username, data.context),
+                },
             });
         }
     });
@@ -126,8 +135,11 @@ const videoControlsHandler = (e) => {
             socketStore.socket.emit("player-control", { message: "play", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: true });
 
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("played", "You", player.value.currentTime),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("played", "You", player.value.currentTime),
+                },
             });
         }, emitAfter.value);
 
@@ -147,8 +159,11 @@ const videoControlsHandler = (e) => {
             socketStore.socket.emit("player-control", { message: "pause", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: false });
 
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("paused", "You", player.value.currentTime),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("paused", "You", player.value.currentTime),
+                },
             });
 
             currentVideoStats.value.lastEmitAt = Date.now();
@@ -182,8 +197,11 @@ const videoSeekedHandler = throttle(() => {
             socketStore.socket.emit("player-control", { message: "seek", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: currentVideoStats.value.isPlaying });
 
             emit("appendMessage", {
-                username: "System",
-                text: messageGenerator("seeked", "You", player.value.currentTime),
+                type: "log",
+                data: {
+                    username: "System",
+                    text: messageGenerator("seeked", "You", player.value.currentTime),
+                },
             });
         }, emitAfter.value);
 

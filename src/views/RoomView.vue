@@ -88,8 +88,11 @@ const joinUser = () => {
     socketStore.socket.emit("new-user-joined", { username: userStore.username, roomCode: room.value.code });
 
     chatBoxElement.value.appendMessage({
-        username: "System",
-        text: `Welcome to ${room.value.name}! Enjoy your stay in the room.`,
+        type: "message",
+        data: {
+            username: "System",
+            text: `Welcome to ${room.value.name}! Enjoy your stay in the room.`,
+        },
     });
 };
 
@@ -97,8 +100,11 @@ const joinUser = () => {
 const bindEvents = () => {
     socketStore.socket.on("user-joined", (data) => {
         chatBoxElement.value.appendMessage({
-            username: "System",
-            text: `${data.username} joined the party.`,
+            type: "message",
+            data: {
+                username: "System",
+                text: `${data.username} joined the party.`,
+            },
         });
 
         usersCount.value = data.members;
@@ -108,8 +114,11 @@ const bindEvents = () => {
 
     socketStore.socket.on("user-left", (data) => {
         chatBoxElement.value.appendMessage({
-            username: "System",
-            text: `${data.username} left the party.`,
+            type: "message",
+            data: {
+                username: "System",
+                text: `${data.username} left the party.`,
+            },
         });
 
         usersCount.value = data.members;
@@ -117,8 +126,11 @@ const bindEvents = () => {
 
     socketStore.socket.on("user-disconnected", (data) => {
         chatBoxElement.value.appendMessage({
-            name: "System",
-            text: `${data.username} left the party.`,
+            type: "message",
+            data: {
+                name: "System",
+                text: `${data.username} left the party.`,
+            },
         });
 
         usersCount.value = data.members;

@@ -6,6 +6,7 @@ import { useUserStore } from "@/stores/user";
 import { useSocketStore } from "@/stores/socket";
 import { useRouter } from "vue-router";
 import { useVideoStore } from "@/stores/video";
+import { getCurrentTime } from "@/composables/time";
 
 const props = defineProps({
     roomName: {
@@ -37,14 +38,22 @@ const leaveRoom = () => {
 
 // ChatBox
 const messages = ref([]);
-const appendMessage = (data) => messages.value.push(data);
+const logMessages = ref([]);
+
+const appendMessage = ({ type, data }) => {
+    if (type == "message") messages.value.push({ ...data, time: getCurrentTime() });
+    else if (type == "log") logMessages.value.push({ ...data, time: getCurrentTime() });
+};
 
 // ChatBox Socket Events
 const bindEvents = () => {
     socketStore.socket.on("new-message", (data) => {
         appendMessage({
-            username: data.username,
-            text: data.message,
+            type: "message",
+            data: {
+                username: data.username,
+                text: data.message,
+            },
         });
     });
 };
@@ -57,8 +66,11 @@ const sendMessage = (message) => {
     socketStore.socket.emit("send-message", message);
 
     appendMessage({
-        username: userStore.username,
-        text: message,
+        type: "message",
+        data: {
+            username: userStore.username,
+            text: message,
+        },
     });
 };
 
@@ -74,6 +86,6 @@ onUnmounted(() => unbindEvents());
 <template>
     <div class="h-full flex flex-col">
         <RoomChatDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" @leave="leaveRoom" />
-        <RoomChatBox :messages="messages" @send="sendMessage" />
+        <RoomChatBox :messages="messages" :logMessages="logMessages" @send="sendMessage" />
     </div>
 </template>
