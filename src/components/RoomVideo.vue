@@ -6,6 +6,7 @@ import { useSocketStore } from "@/stores/socket";
 import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
 import RoomVideoEmojis from "@/components/RoomVideoEmojis.vue";
+import { throttle } from "lodash";
 
 const props = defineProps({
     roomType: {
@@ -35,11 +36,15 @@ const player = ref(null);
 const currentVideoStats = ref({
     currentTime: 0,
     isPlaying: false,
-    allowEmit: true,
+    lastEmitAt: 0,
 });
+const emitAfter = computed(() => (Date.now() - currentVideoStats.value.lastEmitAt > 500 ? 0 : Date.now() - currentVideoStats.value.lastEmitAt));
 
 // Update player
-const updatePlayer = () => {
+const updatePlayer = (isPlaying, context) => {
+    currentVideoStats.value.isPlaying = isPlaying;
+    currentVideoStats.value.currentTime = context;
+
     player.value.currentTime = currentVideoStats.value.currentTime;
 
     if (currentVideoStats.value.isPlaying) player.value.play();
@@ -52,13 +57,9 @@ const messageGenerator = (state, username, context) => `${username} ${state} the
 // Bind and unbind socket events
 const bindEvents = () => {
     socketStore.socket.on("player-update", (data) => {
+        updatePlayer(data.isPlaying, data.context);
+
         if (data.message == "play") {
-            currentVideoStats.value.isPlaying = true;
-            currentVideoStats.value.currentTime = data.context;
-            currentVideoStats.value.allowEmit = false;
-
-            updatePlayer();
-
             emit("appendMessage", {
                 username: "System",
                 text: messageGenerator("played", data.username, data.context),
@@ -66,15 +67,16 @@ const bindEvents = () => {
         }
 
         if (data.message == "pause") {
-            currentVideoStats.value.isPlaying = false;
-            currentVideoStats.value.currentTime = data.context;
-            currentVideoStats.value.allowEmit = false;
-
-            updatePlayer();
-
             emit("appendMessage", {
                 username: "System",
                 text: messageGenerator("paused", data.username, data.context),
+            });
+        }
+
+        if (data.message == "seek") {
+            emit("appendMessage", {
+                username: "System",
+                text: messageGenerator("seeked", data.username, data.context),
             });
         }
     });
@@ -85,42 +87,90 @@ const unbindEvents = () => {
 };
 
 // Video player controls handler listener
-const videoControlsHandler = (e) => {
-    if (e.type == "play") {
-        if (currentVideoStats.value.allowEmit == true) {
-            socketStore.socket.emit("player-control", { message: "play", context: player.value.currentTime, roomCode: props.roomCode });
+const seekingStatus = ref({
+    isSeeking: false,
+    seekStart: null,
+    seekEnd: null,
+});
 
-            currentVideoStats.value.isPlaying = true;
+const videoControlsHandler = (e) => {
+    if (seekingStatus.value.isSeeking) return;
+
+    if (e.type == "play") {
+        currentVideoStats.value.isPlaying = true;
+
+        setTimeout(() => {
+            socketStore.socket.emit("player-control", { message: "play", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: true });
 
             emit("appendMessage", {
                 username: "System",
                 text: messageGenerator("played", "You", player.value.currentTime),
             });
-        }
+        }, emitAfter.value);
 
-        setTimeout(() => (currentVideoStats.value.allowEmit = true), 500);
+        currentVideoStats.value.lastEmitAt = Date.now() + emitAfter.value;
     } else if (e.type == "pause") {
-        if (currentVideoStats.value.allowEmit == true) {
-            socketStore.socket.emit("player-control", { message: "pause", context: player.value.currentTime, roomCode: props.roomCode });
-
+        setTimeout(() => {
             currentVideoStats.value.isPlaying = false;
+
+            socketStore.socket.emit("player-control", { message: "pause", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: false });
 
             emit("appendMessage", {
                 username: "System",
                 text: messageGenerator("paused", "You", player.value.currentTime),
             });
-        }
 
-        setTimeout(() => (currentVideoStats.value.allowEmit = true), 500);
+            currentVideoStats.value.lastEmitAt = Date.now();
+        }, emitAfter.value);
+
+        currentVideoStats.value.lastEmitAt = Date.now() + emitAfter.value;
     }
 };
 
+// Video seeking handler listener
+const videoSeekingHandler = () => {
+    if (seekingStatus.value.isSeeking) return;
+
+    seekingStatus.value.isSeeking = true;
+    seekingStatus.value.seekStart = Math.floor(currentVideoStats.value.currentTime);
+    seekingStatus.value.seekEnd = null;
+};
+
+// Video seeked handler listener
+const videoSeekedHandler = () => {
+    if (!seekingStatus.value.isSeeking) return;
+
+    seekingStatus.value.isSeeking = false;
+    seekingStatus.value.seekEnd = Math.floor(player.value.currentTime);
+
+    if (seekingStatus.value.seekStart != seekingStatus.value.seekEnd) {
+        setTimeout(() => {
+            currentVideoStats.value.currentTime = player.value.currentTime;
+            currentVideoStats.value.isPlaying = player.value.playing;
+
+            socketStore.socket.emit("player-control", { message: "seek", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: currentVideoStats.value.isPlaying });
+
+            emit("appendMessage", {
+                username: "System",
+                text: messageGenerator("seeked", "You", player.value.currentTime),
+            });
+        }, emitAfter.value);
+
+        currentVideoStats.value.lastEmitAt = Date.now() + emitAfter.value;
+    }
+};
+
+// Update video stats
 const updateVideoStats = () => (currentVideoStats.value.currentTime = player.value.currentTime);
 
+// Add and remove player listeners
 const addPlayerListeners = () => {
     playerElement.value.addEventListener("play", videoControlsHandler, false);
     playerElement.value.addEventListener("pause", videoControlsHandler, false);
+    playerElement.value.addEventListener("seeking", videoSeekingHandler, false);
+    playerElement.value.addEventListener("seeked", videoSeekedHandler, false);
     playerElement.value.addEventListener("loadedmetadata", updateVideoStats, false);
+    playerElement.value.addEventListener("playing", updateVideoStats, false);
 };
 
 const removePlayerListeners = () => {
@@ -128,7 +178,10 @@ const removePlayerListeners = () => {
 
     playerElement.value.removeEventListener("play", videoControlsHandler, false);
     playerElement.value.removeEventListener("pause", videoControlsHandler, false);
+    playerElement.value.removeEventListener("seeking", videoSeekingHandler, false);
+    playerElement.value.removeEventListener("seeked", videoSeekedHandler, false);
     playerElement.value.removeEventListener("loadedmetadata", updateVideoStats, false);
+    playerElement.value.removeEventListener("playing", updateVideoStats, false);
 };
 
 // Add offline video caption via upload

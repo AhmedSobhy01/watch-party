@@ -17,6 +17,7 @@
         "@fortawesome/vue-fontawesome": "^3.0.8",
         "@skjnldsv/vue-plyr": "^7.5.0",
         "keen-slider": "^6.8.6",
+        "lodash": "^4.17.21",
         "notyf": "^3.10.0",
         "pinia": "^2.1.7",
         "plyr": "^3.7.8",

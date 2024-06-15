@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
         io.in(data.roomCode).emit("user-joined", { username: data.username, members: Object.keys(roomUsers).length });
     });
 
-    socket.on("player-control", (data) => socket.to(users[socket.id].roomCode).emit("player-update", { message: data.message, context: data.context, username: users[socket.id].username }));
+    socket.on("player-control", (data) => socket.to(users[socket.id].roomCode).emit("player-update", { message: data.message, context: data.context, username: users[socket.id].username, isPlaying: data.isPlaying }));
 
     socket.on("send-message", (message) => socket.to(users[socket.id].roomCode).emit("new-message", { message: message, username: users[socket.id].username }));
 
