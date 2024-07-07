@@ -7,6 +7,7 @@ import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
 import RoomVideoEmojis from "@/components/RoomVideoEmojis.vue";
 import { throttle } from "lodash";
+import Hls from "hls.js";
 
 const props = defineProps({
     roomType: {
@@ -22,17 +23,99 @@ const props = defineProps({
 
 const emit = defineEmits(["appendMessage", "reloadComponent"]);
 
+const loading = ref(true);
+
 const socketStore = useSocketStore();
 const videoStore = useVideoStore();
 
 // Files
-const videoFiles = computed(() => props.files.filter((file) => file.type == "video"));
 const captionsFiles = computed(() => props.files.filter((file) => file.type == "caption"));
 
 // Video player
 const playerContainerElement = ref(null);
 const playerElement = ref(null);
 const player = ref(null);
+
+// Video Player Initialization
+const initVideoPlayer = async () => {
+    // Online video player
+    const source = props.files.filter((file) => file.type == "video")[0].url;
+    const defaultOptions = {
+        fullscreen: {
+            enabled: true,
+            fallback: true,
+            iosNative: false,
+            container: "#player-container",
+        },
+    };
+
+    if (props.roomType == "offline") {
+        player.value = new Plyr(playerElement.value, defaultOptions);
+    } else if (!Hls.isSupported()) {
+        playerElement.value.src = source;
+        player.value = new Plyr(playerElement.value, defaultOptions);
+    } else {
+        await fetch(source, { method: "HEAD" })
+            .then((res) => {
+                const isM3U8 = /2\d\d/.test("" + res.status);
+
+                if (isM3U8) {
+                    const hls = new Hls();
+                    hls.loadSource(source);
+
+                    const updateQuality = (newQuality) => {
+                        if (newQuality === 0) {
+                            window.hls.currentLevel = -1; //Enable AUTO quality if option.value = 0
+                        } else {
+                            window.hls.levels.forEach((level, levelIndex) => {
+                                if (level.height === newQuality) window.hls.currentLevel = levelIndex;
+                            });
+                        }
+                    };
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                        const availableQualities = hls.levels.map((l) => l.height);
+                        availableQualities.unshift(0);
+
+                        // Add new qualities to option
+                        defaultOptions.quality = {
+                            default: 0, // Default - AUTO
+                            options: availableQualities,
+                            forced: true,
+                            onChange: (e) => updateQuality(e),
+                        };
+
+                        // Add Auto Label
+                        defaultOptions.i18n = {
+                            qualityLabel: {
+                                0: "Auto",
+                            },
+                        };
+
+                        hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
+                            const span = document.querySelector(".plyr__menu__container [data-plyr='quality'][value='0'] span");
+
+                            span.innerHTML = hls.autoLevelEnabled ? `AUTO (${hls.levels[data.level].height}p)` : `AUTO`;
+                        });
+
+                        // Initialize new Plyr player with quality options
+                        player.value = new Plyr(playerElement.value, defaultOptions);
+                    });
+
+                    hls.attachMedia(playerElement.value);
+                    window.hls = hls;
+                } else {
+                    throw new Error("Not a valid m3u8 file");
+                }
+            })
+            .catch((_) => {
+                playerElement.value.src = source;
+                player.value = new Plyr(playerElement.value, defaultOptions);
+            });
+    }
+};
+
+// Video stats
 const currentVideoStats = ref({
     currentTime: 0,
     isPlaying: false,
@@ -260,22 +343,13 @@ const addCaption = async () => {
     emit("reloadComponent");
 };
 
-onMounted(() => {
-    player.value = new Plyr(playerElement.value, {
-        fullscreen: {
-            enabled: true,
-            fallback: true,
-            iosNative: false,
-            container: "#player-container",
-        },
-    });
+onMounted(async () => {
+    await initVideoPlayer();
+
+    loading.value = false;
 
     bindEvents();
-
     addPlayerListeners();
-
-    // Play at last registered time at first load
-    player.value.on("loadeddata", () => (player.value.currentTime = videoStore.latestVideoTime));
 });
 
 onBeforeUnmount(() => {
@@ -285,11 +359,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+    <div v-if="loading" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-90 z-50 flex items-center justify-center">
+        <div class="flex items-center flex-col gap-8">
+            <div class="loader"></div>
+            <p class="text-white text-xl font-bold">Loading...</p>
+        </div>
+    </div>
+
     <div class="relative h-full overflow-hidden" id="player-container" ref="playerContainerElement">
         <video playsinline controls class="w-full h-full" ref="playerElement">
             <template v-if="roomType == 'online'">
-                <source v-for="file in videoFiles" :key="file.url" :src="file.url" :type="file?.mime ?? 'video/mp4'" />
-
                 <track v-for="file in captionsFiles" :key="file.url" :src="file.url" :srclang="file.label.slice(0, 2).toLowerCase()" :label="file.label" />
             </template>
 
@@ -308,3 +387,29 @@ onBeforeUnmount(() => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.loader {
+    display: inline-flex;
+    gap: 10px;
+}
+.loader:before,
+.loader:after {
+    content: "";
+    height: 50px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(farthest-side, #000 95%, #0000) 35% 35%/6px 6px no-repeat #fff;
+    transform: scaleX(var(--s, 1)) rotate(0deg);
+    animation: l6 1s infinite linear;
+}
+.loader:after {
+    --s: -1;
+    animation-delay: -0.1s;
+}
+@keyframes l6 {
+    100% {
+        transform: scaleX(var(--s, 1)) rotate(360deg);
+    }
+}
+</style>

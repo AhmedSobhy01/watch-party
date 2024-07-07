@@ -16,6 +16,7 @@
         "@fortawesome/free-solid-svg-icons": "^6.5.2",
         "@fortawesome/vue-fontawesome": "^3.0.8",
         "@skjnldsv/vue-plyr": "^7.5.0",
+        "hls.js": "^1.5.14-0.canary.10417",
         "keen-slider": "^6.8.6",
         "lodash": "^4.17.21",
         "notyf": "^3.10.0",

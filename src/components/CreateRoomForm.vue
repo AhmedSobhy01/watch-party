@@ -160,7 +160,7 @@ const createRoom = () => {
                     <option value="video">Video</option>
                     <option value="caption">Caption</option>
                 </select>
-                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" placeholder="Source Label" autocomplete="off" v-model="form.files[index].label" />
+                <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" placeholder="Source Label" autocomplete="off" v-model="form.files[index].label" v-if="form.files[index].type == 'caption'" />
                 <input class="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 bg-zinc-800 text-white" type="text" placeholder="Source URL" autocomplete="off" v-model="form.files[index].url" />
             </div>
 

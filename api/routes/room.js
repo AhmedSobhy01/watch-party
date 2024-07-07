@@ -14,8 +14,14 @@ router.post("/create", async (req, res) => {
     let room;
 
     if (roomType == "online") {
-        const videoFiles = files.filter((file) => file.type === "video" && file.url).map((file) => ({ type: "video", url: file.url }));
-        const captionFiles = files.filter((file) => file.type === "caption" && file.label && file.url).map((file) => ({ type: "caption", label: file.label, url: file.url }));
+        const inputVideoFiles = files.filter((file) => file.type === "video" && file.url);
+        const videoFiles = inputVideoFiles.map((file) => ({ type: "video", url: file.url }));
+
+        const inputCaptionFiles = files.filter((file) => file.type === "caption" && file.label && file.url);
+        const captionFiles = inputCaptionFiles.map((file) => ({ type: "caption", label: file.label, url: file.url }));
+
+        if (inputVideoFiles.length !== videoFiles.length) return res.status(400).send({ message: "Please fill all missing fields" });
+        if (inputCaptionFiles.length !== captionFiles.length) return res.status(400).send({ message: "Please fill all missing fields" });
 
         if (videoFiles.length === 0) return res.status(400).send({ message: "One video file is required" });
 
@@ -48,23 +54,29 @@ router.post("/join", (req, res) => {
 
     if (!roomCode) return res.status(400).send({ message: "Please fill all the fields" });
 
-    Room.findOne({ roomCode }).then((room) => {
-        if (!room) {
+    Room.findOne({ roomCode })
+        .then((room) => {
+            if (!room) {
+                res.send({
+                    message: "Room not found.",
+                });
+            } else {
+                res.send({
+                    message: "success",
+                    room: {
+                        name: room.roomName,
+                        code: room.roomCode,
+                        type: room.roomType,
+                        files: room.files,
+                    },
+                });
+            }
+        })
+        .catch((err) => {
             res.send({
                 message: "Room not found.",
             });
-        } else {
-            res.send({
-                message: "success",
-                room: {
-                    name: room.roomName,
-                    code: room.roomCode,
-                    type: room.roomType,
-                    files: room.files,
-                },
-            });
-        }
-    });
+        });
 });
 
 module.exports = router;
