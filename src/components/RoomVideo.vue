@@ -37,6 +37,53 @@ const playerElement = ref(null);
 const player = ref(null);
 
 // Video Player Initialization
+const loadM3U8 = (source, options = {}) => {
+    const hls = new Hls();
+    hls.loadSource(source);
+
+    const updateQuality = (newQuality) => {
+        if (newQuality === 0) {
+            window.hls.currentLevel = -1; //Enable AUTO quality if option.value = 0
+        } else {
+            window.hls.levels.forEach((level, levelIndex) => {
+                if (level.height === newQuality) window.hls.currentLevel = levelIndex;
+            });
+        }
+    };
+
+    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+        const availableQualities = hls.levels.map((l) => l.height);
+        availableQualities.unshift(0);
+
+        // Add new qualities to option
+        options.quality = {
+            default: 0, // Default - AUTO
+            options: availableQualities,
+            forced: true,
+            onChange: (e) => updateQuality(e),
+        };
+
+        // Add Auto Label
+        options.i18n = {
+            qualityLabel: {
+                0: "Auto",
+            },
+        };
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
+            const span = document.querySelector(".plyr__menu__container [data-plyr='quality'][value='0'] span");
+
+            span.innerHTML = hls.autoLevelEnabled ? `AUTO (${hls.levels[data.level].height}p)` : `AUTO`;
+        });
+
+        // Initialize new Plyr player with quality options
+        player.value = new Plyr(playerElement.value, options);
+    });
+
+    hls.attachMedia(playerElement.value);
+    window.hls = hls;
+};
+
 const initVideoPlayer = async () => {
     // Online video player
     const source = props.files.filter((file) => file.type == "video")[0].url;
@@ -55,58 +102,20 @@ const initVideoPlayer = async () => {
         playerElement.value.src = source;
         player.value = new Plyr(playerElement.value, defaultOptions);
     } else {
+        if (source.includes(".m3u8")) {
+            loadM3U8(source, defaultOptions);
+            return;
+        }
+
         await fetch(source, { method: "HEAD" })
             .then((res) => {
-                const isM3U8 = /2\d\d/.test("" + res.status);
+                const isOK = /2\d\d/.test("" + res.status);
 
-                if (isM3U8) {
-                    const hls = new Hls();
-                    hls.loadSource(source);
+                const contentType = res.headers.get("content-type").toLowerCase();
+                const isM3U8 = contentType === "application/vnd.apple.mpegurl" || contentType === "application/x-mpegURL" || contentType === "video/mp2t";
 
-                    const updateQuality = (newQuality) => {
-                        if (newQuality === 0) {
-                            window.hls.currentLevel = -1; //Enable AUTO quality if option.value = 0
-                        } else {
-                            window.hls.levels.forEach((level, levelIndex) => {
-                                if (level.height === newQuality) window.hls.currentLevel = levelIndex;
-                            });
-                        }
-                    };
-
-                    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                        const availableQualities = hls.levels.map((l) => l.height);
-                        availableQualities.unshift(0);
-
-                        // Add new qualities to option
-                        defaultOptions.quality = {
-                            default: 0, // Default - AUTO
-                            options: availableQualities,
-                            forced: true,
-                            onChange: (e) => updateQuality(e),
-                        };
-
-                        // Add Auto Label
-                        defaultOptions.i18n = {
-                            qualityLabel: {
-                                0: "Auto",
-                            },
-                        };
-
-                        hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
-                            const span = document.querySelector(".plyr__menu__container [data-plyr='quality'][value='0'] span");
-
-                            span.innerHTML = hls.autoLevelEnabled ? `AUTO (${hls.levels[data.level].height}p)` : `AUTO`;
-                        });
-
-                        // Initialize new Plyr player with quality options
-                        player.value = new Plyr(playerElement.value, defaultOptions);
-                    });
-
-                    hls.attachMedia(playerElement.value);
-                    window.hls = hls;
-                } else {
-                    throw new Error("Not a valid m3u8 file");
-                }
+                if (isOK && isM3U8) loadM3U8(source, defaultOptions);
+                else throw new Error("Not a valid m3u8 file");
             })
             .catch((_) => {
                 playerElement.value.src = source;
