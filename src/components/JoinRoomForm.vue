@@ -1,7 +1,7 @@
 <script setup>
-import { useUserStore } from "@/stores/user";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useUserStore } from "@/stores/user";
 
 const errorMessage = ref("");
 
@@ -10,7 +10,7 @@ const userStore = useUserStore();
 
 const form = ref({
     username: "",
-    roomCode: "",
+    roomCode: router.currentRoute.value.query.roomCode || "",
 });
 
 const joinRoom = () => {

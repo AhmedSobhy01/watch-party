@@ -1,10 +1,10 @@
 <script setup>
-import RoomChatDetails from "./RoomChatDetails.vue";
-import RoomChatBox from "./RoomChatBox.vue";
 import { onMounted, onUnmounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import RoomDetails from "@/components/RoomDetails.vue";
+import RoomChatBox from "@/components/RoomChatBox.vue";
 import { useUserStore } from "@/stores/user";
 import { useSocketStore } from "@/stores/socket";
-import { useRouter } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { getCurrentTime } from "@/composables/time";
 
@@ -15,9 +15,6 @@ const props = defineProps({
     roomCode: {
         type: String,
     },
-    usersCount: {
-        type: Number,
-    },
 });
 
 const router = useRouter();
@@ -25,16 +22,8 @@ const socketStore = useSocketStore();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
 
-// Leave Room
-const leaveRoom = () => {
-    socketStore.socket.emit("leave-room");
-    userStore.username = "";
-
-    // Reset Video Store
-    videoStore.$reset();
-
-    router.replace("/");
-};
+// Users Count
+const usersCount = ref(1);
 
 // ChatBox
 const messages = ref([]);
@@ -47,6 +36,42 @@ const appendMessage = ({ type, data }) => {
 
 // ChatBox Socket Events
 const bindEvents = () => {
+    socketStore.socket.on("user-joined", (data) => {
+        appendMessage({
+            type: "message",
+            data: {
+                username: data.username,
+                text: `joined the party`,
+            },
+        });
+
+        usersCount.value = data.members;
+    });
+
+    socketStore.socket.on("user-left", (data) => {
+        appendMessage({
+            type: "message",
+            data: {
+                username: data.username,
+                text: "left the party",
+            },
+        });
+
+        usersCount.value = data.members;
+    });
+
+    socketStore.socket.on("user-disconnected", (data) => {
+        appendMessage({
+            type: "message",
+            data: {
+                name: data.username,
+                text: "left the party",
+            },
+        });
+
+        usersCount.value = data.members;
+    });
+
     socketStore.socket.on("new-message", (data) => {
         appendMessage({
             type: "message",
@@ -60,6 +85,10 @@ const bindEvents = () => {
 
 const unbindEvents = () => {
     socketStore.socket.off("new-message");
+    socketStore.socket.off("user-joined");
+    socketStore.socket.off("user-left");
+    socketStore.socket.off("user-disconnected");
+    socketStore.socket.off("player-update");
 };
 // ChatBox Methods
 const sendMessage = (message) => {
@@ -85,7 +114,7 @@ onUnmounted(() => unbindEvents());
 
 <template>
     <div class="h-full flex flex-col">
-        <RoomChatDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" @leave="leaveRoom" />
+        <RoomDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" />
         <RoomChatBox :messages="messages" :logMessages="logMessages" @send="sendMessage" />
     </div>
 </template>

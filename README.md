@@ -45,8 +45,7 @@ Follow these steps to get the project up and running locally:
     ```
 
 2. **Create the .env File:**
-
-    Copy the .env.example file to create a new .env file:
+   Copy the .env.example file to create a new .env file:
 
     ```bash
     cp .env.example .env
@@ -67,35 +66,33 @@ Follow these steps to get the project up and running locally:
     npm install
     ```
 
-5. **Start the Backend Server:**
+5. **Create the .env File:**
+   Copy the .env.example file to create a new .env file:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+6. **Start the Backend Server:**
 
     ```bash
     npm start
     ```
 
-6. **Start the Frontend Application:**
-   Return to the root directory and run:
+7. **Start the Frontend Application:**
+   In another terminal, return to the root directory and run:
 
     ```bash
+    npm run build
     npm start
     ```
 
-7. **Open Your Browser:**
+8. **Open Your Browser:**
    Visit `http://localhost:3000` to start using the watch party website. 🍿
 
 ## ⚙️ Configuration
 
 Customize settings such as server port and other environment variables in the `.env` file. Refer to the `.env.example` file for guidance on setting up your environment.
-
-## 🎯 Future Improvements
-
-We plan to enhance the project with additional features, such as:
-
--   **Integration with Popular Streaming Services:** To provide even more streaming options.
--   **Enhanced User Profiles:** Allow users to create and customize their profiles.
--   **Improved Synchronization:** Further optimize the synchronization features for better performance.
-
-Stay tuned for updates and new features!
 
 ## 📜 License
 

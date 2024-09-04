@@ -1,4 +1,5 @@
 <script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { Vue3Lottie } from "vue3-lottie";
 import LaughEmojiJSON from "@/assets/emojis/laugh.json";
 import AngryEmojiJSON from "@/assets/emojis/angry.json";
@@ -7,7 +8,6 @@ import LoveEyesEmojiJSON from "@/assets/emojis/love-eyes.json";
 import StarEyesEmojiJSON from "@/assets/emojis/star-eyes.json";
 import SurprisedEmojiJSON from "@/assets/emojis/surprised.json";
 import { useSocketStore } from "@/stores/socket";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 const props = defineProps({
     playerContainer: {
@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
     </div>
 </template>
 
-<style>
+<style scoped>
 .float-emoji {
     animation-name: float-up-animation;
     animation-fill-mode: forwards;

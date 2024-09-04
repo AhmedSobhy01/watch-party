@@ -1,6 +1,6 @@
 <script setup>
-import { useVideoStore } from "@/stores/video";
 import { ref } from "vue";
+import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
 
 const props = defineProps({

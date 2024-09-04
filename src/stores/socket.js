@@ -32,7 +32,6 @@ export const useSocketStore = defineStore("socket", () => {
             socket.value = null;
             error.value = false;
             connected.value = false;
-            s;
         }
     };
 

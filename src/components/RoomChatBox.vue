@@ -1,7 +1,7 @@
 <script setup>
+import { nextTick, ref, watch } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faCircleChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { nextTick, ref, watch } from "vue";
 import EmojisBar from "@/components/EmojisBar.vue";
 
 const props = defineProps({
@@ -51,7 +51,7 @@ const messageInput = ref(null);
 const sendMessage = () => {
     if (!messageInput.value.trim()) return;
 
-    emit("send", messageInput.value);
+    emit("send", messageInput.value.trim());
     messageInput.value = "";
 };
 </script>

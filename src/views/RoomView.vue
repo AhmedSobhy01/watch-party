@@ -1,7 +1,7 @@
 <script setup>
 import RoomVideo from "@/components/RoomVideo.vue";
 import RoomChat from "@/components/RoomChat.vue";
-import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { nextTick, onMounted, ref } from "vue";
 import GoBackButton from "@/components/GoBackButton.vue";
 import errorImageUrl from "@/assets/images/error.png";
 import { useSocketStore } from "@/stores/socket";
@@ -25,16 +25,15 @@ const chatBoxElement = ref(null);
 
 // Room Data
 const room = ref(null);
-const usersCount = ref(1);
 
 // Fetch Room Data
 const getRoom = async () => {
+    const roomCode = router.currentRoute.value.params.roomCode;
+
     if (!userStore.username) {
-        router.replace("/");
+        router.replace("/room/join?roomCode=" + roomCode);
         return;
     }
-
-    const roomCode = window.location.pathname.split("/")[2];
 
     const response = await fetch(`${import.meta.env.VITE_API_URL}/room/join`, {
         method: "POST",
@@ -83,69 +82,18 @@ const proceedToRoom = async () => {
 
 // Initialize Room
 const joinUser = () => {
-    bindEvents();
-
     socketStore.socket.emit("new-user-joined", { username: userStore.username, roomCode: room.value.code });
 
     chatBoxElement.value.appendMessage({
         type: "message",
         data: {
             username: "System",
-            text: `Welcome to ${room.value.name}! Enjoy your stay in the room.`,
+            text: `👋 Welcome to ${room.value.name}, ${userStore.username}!`,
         },
     });
 };
 
-// Bind Events
-const bindEvents = () => {
-    socketStore.socket.on("user-joined", (data) => {
-        chatBoxElement.value.appendMessage({
-            type: "message",
-            data: {
-                username: "System",
-                text: `${data.username} joined the party.`,
-            },
-        });
-
-        usersCount.value = data.members;
-    });
-
-    socketStore.socket.on("update-member-count", (data) => (usersCount.value = data.members));
-
-    socketStore.socket.on("user-left", (data) => {
-        chatBoxElement.value.appendMessage({
-            type: "message",
-            data: {
-                username: "System",
-                text: `${data.username} left the party.`,
-            },
-        });
-
-        usersCount.value = data.members;
-    });
-
-    socketStore.socket.on("user-disconnected", (data) => {
-        chatBoxElement.value.appendMessage({
-            type: "message",
-            data: {
-                name: "System",
-                text: `${data.username} left the party.`,
-            },
-        });
-
-        usersCount.value = data.members;
-    });
-};
-
-const unbindEvents = () => {
-    socketStore.socket.off("user-joined");
-    socketStore.socket.off("update-member-count");
-    socketStore.socket.off("user-left");
-    socketStore.socket.off("user-disconnected");
-    socketStore.socket.off("player-update");
-};
-
-// Video Component
+// Refresh Video Component on video change
 const refreshVideoComponent = ref(false);
 
 const reloadVideoComponent = async () => {
@@ -157,7 +105,6 @@ const reloadVideoComponent = async () => {
 };
 
 onMounted(() => getRoom());
-onUnmounted(() => unbindEvents());
 </script>
 
 <template>
@@ -175,11 +122,11 @@ onUnmounted(() => unbindEvents());
 
     <div class="flex lg:items-center flex-col lg:flex-row gap-5 lg:h-screen w-full py-4" v-else>
         <div class="lg:w-4/5 lg:h-full">
-            <RoomVideo :roomType="room.type" :roomCode="room.code" :files="room.files" @appendMessage="(message) => chatBoxElement.appendMessage(message)" @reloadComponent="reloadVideoComponent" v-if="!refreshVideoComponent" />
+            <RoomVideo :roomType="room.type" :files="room.files" @appendMessage="(message) => chatBoxElement.appendMessage(message)" @reloadComponent="reloadVideoComponent" v-if="!refreshVideoComponent" />
         </div>
 
         <div class="lg:w-1/5 lg:h-full">
-            <RoomChat :roomName="room.name" :roomCode="room.code" :usersCount="usersCount" ref="chatBoxElement" />
+            <RoomChat :roomName="room.name" :roomCode="room.code" ref="chatBoxElement" />
         </div>
     </div>
 </template>

@@ -1,8 +1,12 @@
 <script setup>
+import { useRouter } from "vue-router";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faSignOutAlt, faUserFriends } from "@fortawesome/free-solid-svg-icons";
 import { Notyf } from "notyf";
 import "notyf/notyf.min.css";
+import { useSocketStore } from "@/stores/socket";
+import { useUserStore } from "@/stores/user";
+import { useVideoStore } from "@/stores/video";
 
 const props = defineProps({
     roomName: {
@@ -16,7 +20,10 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["leave"]);
+const router = useRouter();
+const socketStore = useSocketStore();
+const userStore = useUserStore();
+const videoStore = useVideoStore();
 
 // Copy Room Code
 const copyRoomCode = () => {
@@ -24,6 +31,17 @@ const copyRoomCode = () => {
     new Notyf({
         position: { x: "center", y: "top" },
     }).success("Room code copied to clipboard");
+};
+
+// Leave Room
+const leaveRoom = () => {
+    socketStore.socket.emit("leave-room");
+    userStore.username = "";
+
+    // Reset Video Store
+    videoStore.$reset();
+
+    router.replace("/");
 };
 </script>
 
@@ -38,7 +56,7 @@ const copyRoomCode = () => {
 
         <div class="text-2xl font-bold select-none cursor-pointer" @click="copyRoomCode">{{ roomCode }}</div>
 
-        <button type="button" class="pl-3" @click="$emit('leave')">
+        <button type="button" class="pl-3" @click="leaveRoom">
             <FontAwesomeIcon class="text-xl" :icon="faSignOutAlt" />
         </button>
     </div>

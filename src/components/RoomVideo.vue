@@ -1,19 +1,16 @@
 <script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { throttle } from "lodash";
 import Plyr from "plyr";
 import "plyr/dist/plyr.css";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useSocketStore } from "@/stores/socket";
 import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
 import RoomVideoEmojis from "@/components/RoomVideoEmojis.vue";
-import { throttle } from "lodash";
 import Hls from "hls.js";
 
 const props = defineProps({
     roomType: {
-        type: String,
-    },
-    roomCode: {
         type: String,
     },
     files: {
@@ -132,7 +129,7 @@ const currentVideoStats = ref({
 });
 
 // Creates a queue for the emit events
-// 250 ms delay is for detecting dblclick event
+// 250 ms delay is for detecting dblclick event when toggling fullscreen
 const emitAfter = computed(() => {
     let delay = 250;
 
@@ -143,9 +140,9 @@ const emitAfter = computed(() => {
 });
 
 // Update player
-const updatePlayer = (isPlaying, context) => {
+const updatePlayer = (isPlaying, currentTime) => {
     currentVideoStats.value.isPlaying = isPlaying;
-    currentVideoStats.value.currentTime = context;
+    currentVideoStats.value.currentTime = currentTime;
 
     player.value.currentTime = currentVideoStats.value.currentTime;
 
@@ -154,19 +151,19 @@ const updatePlayer = (isPlaying, context) => {
 };
 
 // Video action message generator
-const messageGenerator = (state, username, context) => `${username} ${state} the video at ${formatTimeFromSeconds(context)}`;
+const messageGenerator = (state, currentTime) => `${state} the video at ${formatTimeFromSeconds(currentTime)}`;
 
 // Bind and unbind socket events
 const bindEvents = () => {
     socketStore.socket.on("player-update", (data) => {
-        updatePlayer(data.isPlaying, data.context);
+        updatePlayer(data.isPlaying, data.currentTime);
 
         if (data.message == "play") {
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("played", data.username, data.context),
+                    username: data.username,
+                    text: messageGenerator("played", data.currentTime),
                 },
             });
         }
@@ -175,8 +172,8 @@ const bindEvents = () => {
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("paused", data.username, data.context),
+                    username: data.username,
+                    text: messageGenerator("paused", data.currentTime),
                 },
             });
         }
@@ -185,8 +182,8 @@ const bindEvents = () => {
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("seeked", data.username, data.context),
+                    username: data.username,
+                    text: messageGenerator("seeked", data.currentTime),
                 },
             });
         }
@@ -224,13 +221,13 @@ const videoControlsHandler = (e) => {
                 return;
             }
 
-            socketStore.socket.emit("player-control", { message: "play", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: true });
+            socketStore.socket.emit("player-control", { message: "play", currentTime: player.value.currentTime, isPlaying: true });
 
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("played", "You", player.value.currentTime),
+                    username: "You",
+                    text: messageGenerator("played", player.value.currentTime),
                 },
             });
         }, emitAfter.value);
@@ -248,13 +245,13 @@ const videoControlsHandler = (e) => {
 
             currentVideoStats.value.isPlaying = false;
 
-            socketStore.socket.emit("player-control", { message: "pause", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: false });
+            socketStore.socket.emit("player-control", { message: "pause", currentTime: player.value.currentTime, isPlaying: false });
 
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("paused", "You", player.value.currentTime),
+                    username: "You",
+                    text: messageGenerator("paused", player.value.currentTime),
                 },
             });
 
@@ -286,13 +283,13 @@ const videoSeekedHandler = throttle(() => {
             currentVideoStats.value.currentTime = player.value.currentTime;
             currentVideoStats.value.isPlaying = player.value.playing;
 
-            socketStore.socket.emit("player-control", { message: "seek", context: player.value.currentTime, roomCode: props.roomCode, isPlaying: currentVideoStats.value.isPlaying });
+            socketStore.socket.emit("player-control", { message: "seek", currentTime: player.value.currentTime, isPlaying: currentVideoStats.value.isPlaying });
 
             emit("appendMessage", {
                 type: "log",
                 data: {
-                    username: "System",
-                    text: messageGenerator("seeked", "You", player.value.currentTime),
+                    username: "You",
+                    text: messageGenerator("seeked", player.value.currentTime),
                 },
             });
         }, emitAfter.value);
