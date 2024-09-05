@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const socketService = require("./services/socketService");
+const initSocket = require("./config/socket");
 
 require("dotenv").config();
 
@@ -38,7 +38,7 @@ connectDB()
             });
         });
     })
-    .then((server) => socketService(server))
+    .then((server) => initSocket(server))
     .catch((err) => {
         console.error(`Error while starting server: ${err}`);
         process.exit(1);

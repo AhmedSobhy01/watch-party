@@ -1,7 +1,8 @@
+const socketIO = require("socket.io");
 const syncController = require("../controllers/syncController");
 
-const socketService = (server) => {
-    const io = require("socket.io")(server, { cors: true, origins: "*:*" });
+const initSocket = (server) => {
+    const io = socketIO(server, { cors: true, origins: "*:*" });
 
     return new Promise((resolve) => {
         io.on("connection", (socket) => {
@@ -14,4 +15,4 @@ const socketService = (server) => {
     });
 };
 
-module.exports = socketService;
+module.exports = initSocket;
