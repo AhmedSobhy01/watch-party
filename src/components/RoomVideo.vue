@@ -25,6 +25,26 @@ const loading = ref(true);
 const socketStore = useSocketStore();
 const videoStore = useVideoStore();
 
+const showControls = ref(true);
+let hideControlsTimeout = null;
+
+const showControlsHandler = () => {
+    showControls.value = true;
+    clearTimeout(hideControlsTimeout);
+    if (currentVideoStats.value.isPlaying) {
+        hideControlsTimeout = setTimeout(() => {
+            showControls.value = false;
+        }, 2000);
+    }
+};
+
+const hideControlsHandler = () => {
+    clearTimeout(hideControlsTimeout);
+    if (currentVideoStats.value.isPlaying) {
+        showControls.value = false;
+    }
+};
+
 // Files
 const captionsFiles = computed(() => props.files.filter((file) => file.type == "caption"));
 
@@ -389,6 +409,8 @@ const addPlayerListeners = () => {
     playerElement.value.addEventListener("loadedmetadata", updateVideoStats, false);
     playerElement.value.addEventListener("playing", updateVideoStats, false);
     playerContainerElement.value.addEventListener("dblclick", videoDoubleClickHandler, false);
+    playerContainerElement.value.addEventListener("mousemove", showControlsHandler, false);
+    playerContainerElement.value.addEventListener("mouseleave", hideControlsHandler, false);
 };
 
 const removePlayerListeners = () => {
@@ -401,6 +423,8 @@ const removePlayerListeners = () => {
     playerElement.value.removeEventListener("loadedmetadata", updateVideoStats, false);
     playerElement.value.removeEventListener("playing", updateVideoStats, false);
     playerContainerElement.value.removeEventListener("dblclick", videoDoubleClickHandler, false);
+    playerContainerElement.value.removeEventListener("mousemove", showControlsHandler, false);
+    playerContainerElement.value.removeEventListener("mouseleave", hideControlsHandler, false);
 };
 
 // Add offline video caption via upload
@@ -503,6 +527,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     unbindEvents();
     removePlayerListeners();
+    clearTimeout(hideControlsTimeout);
 });
 </script>
 
@@ -528,7 +553,7 @@ onBeforeUnmount(() => {
         </video>
 
         <input type="file" class="hidden" accept="text/vtt" ref="captionUploadElement" @change="addCaption" />
-        <button type="button" class="absolute top-3 right-3 px-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-all ease-in-out duration-100" @click="captionUploadElement.click()" v-if="!currentVideoStats.isPlaying">Add Subtitle</button>
+        <button type="button" class="absolute top-3 right-3 px-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-all ease-in-out duration-300" :class="{ 'opacity-0 pointer-events-none': !showControls && currentVideoStats.isPlaying, 'opacity-100': showControls || !currentVideoStats.isPlaying }" @click="captionUploadElement.click()">Add Subtitle</button>
 
         <div class="absolute bottom-3 right-32 z-50">
             <RoomVideoEmojis :playerContainer="playerContainerElement" />
