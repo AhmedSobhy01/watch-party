@@ -91,6 +91,11 @@ const initVideoPlayer = async () => {
             iosNative: false,
             container: "#player-container",
         },
+        captions: {
+            active: videoStore.offlineCaptionFiles.length > 0,
+            update: true,
+            language: "auto",
+        },
     };
 
     if (props.roomType == "offline") {
@@ -128,6 +133,10 @@ const currentVideoStats = ref({
     lastEmitAt: 0,
 });
 
+// the player is synced with other users
+const isSynced = ref(false);
+const isUpdatingFromSync = ref(false);
+
 // Creates a queue for the emit events
 // 250 ms delay is for detecting dblclick event when toggling fullscreen
 const emitAfter = computed(() => {
@@ -140,14 +149,33 @@ const emitAfter = computed(() => {
 });
 
 // Update player
-const updatePlayer = (isPlaying, currentTime) => {
+const updatePlayer = (isPlaying, currentTime, fromSync = false) => {
+    if (fromSync) isUpdatingFromSync.value = true;
+
     currentVideoStats.value.isPlaying = isPlaying;
     currentVideoStats.value.currentTime = currentTime;
 
-    player.value.currentTime = currentVideoStats.value.currentTime;
+    const applyUpdate = () => {
+        player.value.currentTime = currentVideoStats.value.currentTime;
 
-    if (currentVideoStats.value.isPlaying) player.value.play();
-    else player.value.pause();
+        if (currentVideoStats.value.isPlaying) player.value.play();
+        else player.value.pause();
+    };
+
+    if (playerElement.value && playerElement.value.readyState >= 1) {
+        applyUpdate();
+    } else {
+        const onLoadedMetadata = () => {
+            applyUpdate();
+            playerElement.value.removeEventListener("loadedmetadata", onLoadedMetadata);
+        };
+        playerElement.value.addEventListener("loadedmetadata", onLoadedMetadata);
+    }
+
+    if (fromSync)
+        setTimeout(() => {
+            isUpdatingFromSync.value = false;
+        }, 500);
 };
 
 // Video action message generator
@@ -188,10 +216,46 @@ const bindEvents = () => {
             });
         }
     });
+
+    socketStore.socket.on("request-video-state", (data) => {
+        if (!player.value) return;
+
+        socketStore.socket.emit("video-state-response", {
+            requestingSocketId: data.requestingSocketId,
+            currentTime: player.value.currentTime,
+            isPlaying: player.value.playing,
+        });
+    });
+
+    socketStore.socket.on("sync-video-state", (data) => {
+        if (isSynced.value) return;
+
+        pendingSyncData.value = data;
+
+        if (!pendingSyncData.value || isSynced.value) return;
+        if (!player.value || !playerElement.value) return;
+
+        if (playerElement.value.readyState >= 3) {
+            isSynced.value = true;
+            updatePlayer(pendingSyncData.value.isPlaying, pendingSyncData.value.currentTime, true);
+            pendingSyncData.value = null;
+        }
+    });
+};
+
+const pendingSyncData = ref(null);
+const applyPendingSync = () => {
+    if (!pendingSyncData.value || isSynced.value) return;
+
+    isSynced.value = true;
+    updatePlayer(pendingSyncData.value.isPlaying, pendingSyncData.value.currentTime, true);
+    pendingSyncData.value = null;
 };
 
 const unbindEvents = () => {
     socketStore.socket.off("player-update");
+    socketStore.socket.off("request-video-state");
+    socketStore.socket.off("sync-video-state");
 };
 
 // Video player controls handler listener
@@ -208,6 +272,7 @@ const seekingStatus = ref({
 
 const videoControlsHandler = (e) => {
     if (seekingStatus.value.isSeeking) return;
+    if (isUpdatingFromSync.value) return;
 
     if (e.type == "play") {
         currentVideoStats.value.isPlaying = true;
@@ -220,6 +285,8 @@ const videoControlsHandler = (e) => {
 
                 return;
             }
+
+            if (!isSynced.value) return;
 
             socketStore.socket.emit("player-control", { message: "play", currentTime: player.value.currentTime, isPlaying: true });
 
@@ -243,6 +310,8 @@ const videoControlsHandler = (e) => {
                 return;
             }
 
+            if (!isSynced.value) return;
+
             currentVideoStats.value.isPlaying = false;
 
             socketStore.socket.emit("player-control", { message: "pause", currentTime: player.value.currentTime, isPlaying: false });
@@ -265,6 +334,7 @@ const videoControlsHandler = (e) => {
 // Video seeking handler listener
 const videoSeekingHandler = () => {
     if (seekingStatus.value.isSeeking) return;
+    if (isUpdatingFromSync.value) return;
 
     seekingStatus.value.isSeeking = true;
     seekingStatus.value.seekStart = Math.floor(currentVideoStats.value.currentTime);
@@ -274,9 +344,12 @@ const videoSeekingHandler = () => {
 // Video seeked handler listener
 const videoSeekedHandler = throttle(() => {
     if (!seekingStatus.value.isSeeking) return;
+    if (isUpdatingFromSync.value) return;
 
     seekingStatus.value.isSeeking = false;
     seekingStatus.value.seekEnd = Math.floor(player.value.currentTime);
+
+    if (!isSynced.value) return;
 
     if (seekingStatus.value.seekStart != seekingStatus.value.seekEnd) {
         setTimeout(() => {
@@ -344,18 +417,87 @@ const addCaption = async () => {
 
     // Save last time
     videoStore.setLatestVideoTime(player.value.currentTime);
+    videoStore.setLatestPlayingState(player.value.playing);
 
     // Reload component
     emit("reloadComponent");
 };
 
 onMounted(async () => {
+    bindEvents();
+
     await initVideoPlayer();
 
     loading.value = false;
 
-    bindEvents();
+    const savedVideoTime = videoStore.latestVideoTime;
+    const savedPlayingState = videoStore.latestPlayingState;
+    const hasSavedState = savedVideoTime > 0;
+
+    if (hasSavedState) {
+        videoStore.setLatestVideoTime(0);
+        videoStore.setLatestPlayingState(false);
+    }
+
+    const restoreSavedState = () => {
+        if (!hasSavedState || isSynced.value) return;
+
+        isUpdatingFromSync.value = true;
+        isSynced.value = true;
+
+        player.value.currentTime = savedVideoTime;
+        currentVideoStats.value.currentTime = savedVideoTime;
+        currentVideoStats.value.isPlaying = savedPlayingState;
+
+        if (savedPlayingState) player.value.play();
+
+        setTimeout(() => {
+            isUpdatingFromSync.value = false;
+        }, 500);
+    };
+
+    const activateLastSubtitle = () => {
+        if (videoStore.offlineCaptionFiles.length === 0) return;
+
+        const enableLastTrack = () => {
+            if (!player.value) return;
+
+            const tracks = playerElement.value.textTracks;
+            if (tracks.length > 0) {
+                const lastTrackIndex = tracks.length - 1;
+                player.value.currentTrack = lastTrackIndex;
+                player.value.toggleCaptions(true);
+            }
+        };
+
+        setTimeout(enableLastTrack, 1000);
+    };
+
+    const onCanPlay = () => {
+        if (pendingSyncData.value && !isSynced.value) {
+            applyPendingSync();
+        } else if (hasSavedState && !isSynced.value) {
+            restoreSavedState();
+            activateLastSubtitle();
+        }
+        playerElement.value.removeEventListener("canplay", onCanPlay);
+    };
+    playerElement.value.addEventListener("canplay", onCanPlay);
+
+    if (pendingSyncData.value) {
+        if (playerElement.value.readyState >= 3) applyPendingSync();
+    } else if (hasSavedState) {
+        if (playerElement.value.readyState >= 3) {
+            restoreSavedState();
+            activateLastSubtitle();
+        }
+    }
+
     addPlayerListeners();
+
+    setTimeout(() => {
+        if (!isSynced.value) isSynced.value = true;
+    }, 2000);
 });
 
 onBeforeUnmount(() => {
@@ -382,7 +524,7 @@ onBeforeUnmount(() => {
                 <source :src="videoStore.videoPath" type="video/mp4" />
             </template>
 
-            <track v-for="file in videoStore.offlineCaptionFiles" :key="file.url" :src="file.url" :srclang="file.label.slice(0, 2).toLowerCase()" :label="file.label" />
+            <track v-for="(file, index) in videoStore.offlineCaptionFiles" :key="file.url" :src="file.url" :srclang="file.label.slice(0, 2).toLowerCase()" :label="file.label" :default="index === videoStore.offlineCaptionFiles.length - 1" />
         </video>
 
         <input type="file" class="hidden" accept="text/vtt" ref="captionUploadElement" @change="addCaption" />

@@ -23,6 +23,20 @@ const syncController = (io, socket) => {
             username: data.username,
             members: roomMembersCount,
         });
+
+        if (roomMembersCount > 1)
+            socket.to(data.roomCode).emit("request-video-state", {
+                requestingSocketId: socket.id,
+            });
+    });
+
+    socket.on("video-state-response", (data) => {
+        if (!socket.data.roomCode || !data.requestingSocketId) return;
+
+        io.to(data.requestingSocketId).emit("sync-video-state", {
+            currentTime: data.currentTime,
+            isPlaying: data.isPlaying,
+        });
     });
 
     socket.on("player-control", (data) => {

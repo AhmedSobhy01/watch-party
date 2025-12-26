@@ -16,6 +16,9 @@ export const useVideoStore = defineStore("video", () => {
     const latestVideoTime = ref(0);
     const setLatestVideoTime = (time) => (latestVideoTime.value = time);
 
+    const latestPlayingState = ref(false);
+    const setLatestPlayingState = (state) => (latestPlayingState.value = state);
+
     const $reset = () => {
         if (!shouldReset.value) {
             shouldReset.value = true;
@@ -25,8 +28,9 @@ export const useVideoStore = defineStore("video", () => {
         videoPath.value = null;
         offlineCaptionFiles.value = [];
         latestVideoTime.value = 0;
+        latestPlayingState.value = false;
         shouldReset.value = true;
     };
 
-    return { videoPath, setVideoPath, offlineCaptionFiles, addOfflineCaptionFile, latestVideoTime, setLatestVideoTime, $reset };
+    return { videoPath, setVideoPath, offlineCaptionFiles, addOfflineCaptionFile, latestVideoTime, setLatestVideoTime, latestPlayingState, setLatestPlayingState, $reset };
 });
