@@ -521,8 +521,10 @@ onMounted(async () => {
 
     const handleKeyDown = (e) => {
         if (!player.value || !playerElement.value) return;
-        const isPlayerFocused = document.activeElement === playerElement.value;
-        if (!isPlayerFocused && !playerContainerElement.value.contains(document.activeElement)) return;
+
+        const isTyping = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.isContentEditable);
+        if (isTyping) return;
+
         if (e.key === "ArrowLeft") {
             player.value.currentTime = Math.max(0, player.value.currentTime - 5);
             e.preventDefault();
