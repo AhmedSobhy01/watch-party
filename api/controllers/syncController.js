@@ -6,6 +6,20 @@ const syncController = (io, socket) => {
         return room ? room.size : 0;
     };
 
+    const getRoomMembers = async (roomCode) => {
+        const room = io.sockets.adapter.rooms.get(roomCode);
+        if (!room) return [];
+
+        const members = [];
+        for (const socketId of room) {
+            const s = io.sockets.sockets.get(socketId);
+            if (s && s.data.username)
+                members.push(s.data.username);
+
+        }
+        return members;
+    };
+
     socket.on("new-user-joined", async (data) => {
         if (!data.roomCode || !data.username || socket.data.roomCode) return;
 
@@ -19,9 +33,11 @@ const syncController = (io, socket) => {
         socket.data.roomCode = room.roomCode;
 
         const roomMembersCount = getRoomMembersCount(data.roomCode);
+        const roomMembers = await getRoomMembers(data.roomCode);
         io.to(data.roomCode).emit("user-joined", {
             username: data.username,
             members: roomMembersCount,
+            membersList: roomMembers,
         });
 
         if (roomMembersCount > 1)
@@ -86,9 +102,11 @@ const syncController = (io, socket) => {
             return;
         }
 
+        const roomMembers = await getRoomMembers(roomCode);
         socket.to(roomCode).emit("user-left", {
             username,
             members: roomMembersCount,
+            membersList: roomMembers,
         });
     });
 
@@ -110,9 +128,11 @@ const syncController = (io, socket) => {
             return;
         }
 
+        const roomMembers = await getRoomMembers(roomCode);
         socket.to(roomCode).emit("user-left", {
             username,
             members: roomMembersCount,
+            membersList: roomMembers,
         });
     });
 };
