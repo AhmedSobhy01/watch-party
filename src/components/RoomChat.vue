@@ -24,6 +24,7 @@ const videoStore = useVideoStore();
 
 // Users Count
 const usersCount = ref(1);
+const membersList = ref([]);
 
 // ChatBox
 const messages = ref([]);
@@ -46,6 +47,7 @@ const bindEvents = () => {
         });
 
         usersCount.value = data.members;
+        membersList.value = data.membersList || [];
     });
 
     socketStore.socket.on("user-left", (data) => {
@@ -58,6 +60,7 @@ const bindEvents = () => {
         });
 
         usersCount.value = data.members;
+        membersList.value = data.membersList || [];
     });
 
     socketStore.socket.on("user-disconnected", (data) => {
@@ -70,6 +73,7 @@ const bindEvents = () => {
         });
 
         usersCount.value = data.members;
+        membersList.value = data.membersList || [];
     });
 
     socketStore.socket.on("new-message", (data) => {
@@ -114,7 +118,7 @@ onUnmounted(() => unbindEvents());
 
 <template>
     <div class="h-full flex flex-col">
-        <RoomDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" />
+        <RoomDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" :membersList="membersList" />
         <RoomChatBox :messages="messages" :logMessages="logMessages" @send="sendMessage" />
     </div>
 </template>
