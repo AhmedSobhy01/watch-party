@@ -204,7 +204,7 @@ const messageGenerator = (state, currentTime) => `${state} the video at ${format
 // Bind and unbind socket events
 const bindEvents = () => {
     socketStore.socket.on("player-update", (data) => {
-        updatePlayer(data.isPlaying, data.currentTime);
+        updatePlayer(data.isPlaying, data.currentTime, true);
 
         if (data.message == "play") {
             emit("appendMessage", {
