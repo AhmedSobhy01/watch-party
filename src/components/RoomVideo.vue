@@ -447,6 +447,22 @@ const addCaption = async () => {
     emit("reloadComponent");
 };
 
+// For seek via keyboard arrows
+const handleKeyDown = (e) => {
+    if (!player.value || !playerElement.value) return;
+
+    const isTyping = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.isContentEditable);
+    if (isTyping) return;
+
+    if (e.key === "ArrowLeft") {
+        player.value.currentTime = Math.max(0, player.value.currentTime - 5);
+        e.preventDefault();
+    } else if (e.key === "ArrowRight") {
+        player.value.currentTime = Math.min(player.value.duration, player.value.currentTime + 5);
+        e.preventDefault();
+    }
+};
+
 onMounted(async () => {
     bindEvents();
 
@@ -519,35 +535,18 @@ onMounted(async () => {
 
     addPlayerListeners();
 
-    const handleKeyDown = (e) => {
-        if (!player.value || !playerElement.value) return;
-
-        const isTyping = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.isContentEditable);
-        if (isTyping) return;
-
-        if (e.key === "ArrowLeft") {
-            player.value.currentTime = Math.max(0, player.value.currentTime - 5);
-            e.preventDefault();
-        } else if (e.key === "ArrowRight") {
-            player.value.currentTime = Math.min(player.value.duration, player.value.currentTime + 5);
-            e.preventDefault();
-        }
-    };
     window.addEventListener("keydown", handleKeyDown);
 
     setTimeout(() => {
         if (!isSynced.value) isSynced.value = true;
     }, 2000);
-
-    onBeforeUnmount(() => {
-        window.removeEventListener("keydown", handleKeyDown);
-    });
 });
 
 onBeforeUnmount(() => {
     unbindEvents();
     removePlayerListeners();
     clearTimeout(hideControlsTimeout);
+    window.removeEventListener("keydown", handleKeyDown);
 });
 </script>
 
