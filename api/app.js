@@ -21,6 +21,11 @@ app.use(
 
 // Routes
 app.use("/room", require("./routes/room"));
+
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use((req, res, next) => res.status(404).send("404 Not Found"));
 
 // Server setup
