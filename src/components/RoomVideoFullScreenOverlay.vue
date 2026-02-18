@@ -33,7 +33,10 @@ const isChatOpen = computed({
 
 const unreadCount = computed(() => chatStore.unreadCount);
 
+const latestUnreadCount = ref(0); // use it to pass to ChatOverlayBox to have latest unread count
 const toggleChat = () => {
+    if (!isChatOpen.value) latestUnreadCount.value = chatStore.unreadCount;
+
     isChatOpen.value = !isChatOpen.value;
 };
 
@@ -111,7 +114,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <Transition name="slide-right-fade">
-                    <ChatOverlayBox v-if="isChatOpen" @close="toggleChat" />
+                    <ChatOverlayBox v-if="isChatOpen" :unreadCount="latestUnreadCount" @close="toggleChat" />
                 </Transition>
 
                 <audio ref="notificationSound" preload="auto">
