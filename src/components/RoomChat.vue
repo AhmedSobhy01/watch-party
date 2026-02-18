@@ -1,11 +1,10 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import RoomDetails from "@/components/RoomDetails.vue";
 import RoomChatBox from "@/components/RoomChatBox.vue";
 import { useUserStore } from "@/stores/user";
 import { useSocketStore } from "@/stores/socket";
-import { useVideoStore } from "@/stores/video";
+import { useChatStore } from "@/stores/chat";
 import { getCurrentTime } from "@/composables/time";
 
 const props = defineProps({
@@ -17,22 +16,17 @@ const props = defineProps({
     },
 });
 
-const router = useRouter();
 const socketStore = useSocketStore();
 const userStore = useUserStore();
-const videoStore = useVideoStore();
+const chatStore = useChatStore();
 
 // Users Count
 const usersCount = ref(1);
 const membersList = ref([]);
 
-// ChatBox
-const messages = ref([]);
-const logMessages = ref([]);
-
 const appendMessage = ({ type, data }) => {
-    if (type == "message") messages.value.push({ ...data, time: getCurrentTime() });
-    else if (type == "log") logMessages.value.push({ ...data, time: getCurrentTime() });
+    if (type == "message") chatStore.addMessage({ ...data, time: getCurrentTime() });
+    else if (type == "log") chatStore.addLogMessage({ ...data, time: getCurrentTime() });
 };
 
 // ChatBox Socket Events
@@ -94,17 +88,18 @@ const unbindEvents = () => {
     socketStore.socket.off("user-disconnected");
     socketStore.socket.off("player-update");
 };
-// ChatBox Methods
+
 const sendMessage = (message) => {
     socketStore.socket.emit("send-message", message);
 
-    appendMessage({
-        type: "message",
-        data: {
+    chatStore.addMessage(
+        {
             username: userStore.username,
             text: message,
+            time: getCurrentTime(),
         },
-    });
+        true,
+    );
 };
 
 // ChatBox Exposed Methods
@@ -112,13 +107,20 @@ defineExpose({
     appendMessage,
 });
 
-onMounted(() => bindEvents());
-onUnmounted(() => unbindEvents());
+onMounted(() => {
+    bindEvents();
+    chatStore.setChatVisible(true);
+});
+
+onUnmounted(() => {
+    unbindEvents();
+    chatStore.setChatVisible(false);
+});
 </script>
 
 <template>
     <div class="h-full flex flex-col">
         <RoomDetails :roomName="roomName" :roomCode="roomCode" :usersCount="usersCount" :membersList="membersList" />
-        <RoomChatBox :messages="messages" :logMessages="logMessages" @send="sendMessage" />
+        <RoomChatBox @send="sendMessage" />
     </div>
 </template>

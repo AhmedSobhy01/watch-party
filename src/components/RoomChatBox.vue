@@ -1,19 +1,15 @@
 <script setup>
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faCircleChevronRight } from "@fortawesome/free-solid-svg-icons";
 import EmojisBar from "@/components/EmojisBar.vue";
-
-const props = defineProps({
-    messages: {
-        type: Array,
-    },
-    logMessages: {
-        type: Array,
-    },
-});
+import { useChatStore } from "@/stores/chat";
 
 const emit = defineEmits(["send"]);
+
+const chatStore = useChatStore();
+const messages = computed(() => chatStore.messages);
+const logMessages = computed(() => chatStore.logMessages);
 
 const chatType = ref("messages");
 
@@ -21,7 +17,7 @@ const messagesChatContainer = ref(null);
 const logChatContainer = ref(null);
 
 watch(
-    () => props.messages.length,
+    () => messages.value.length,
     async () => {
         if (messagesChatContainer.value) {
             await nextTick();
@@ -30,11 +26,11 @@ watch(
                 behavior: "smooth",
             });
         }
-    }
+    },
 );
 
 watch(
-    () => props.logMessages.length,
+    () => logMessages.value.length,
     async () => {
         if (logChatContainer.value) {
             await nextTick();
@@ -43,8 +39,12 @@ watch(
                 behavior: "smooth",
             });
         }
-    }
+    },
 );
+
+watch(chatType, (newType) => {
+    if (newType === "messages") chatStore.clearUnreadCount();
+});
 
 // Send Message
 const messageInput = ref(null);

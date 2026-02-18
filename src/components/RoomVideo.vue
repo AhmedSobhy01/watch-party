@@ -7,6 +7,7 @@ import { useSocketStore } from "@/stores/socket";
 import { useVideoStore } from "@/stores/video";
 import { formatTimeFromSeconds } from "@/composables/time";
 import RoomVideoEmojis from "@/components/RoomVideoEmojis.vue";
+import RoomVideoFullScreenOverlay from "@/components/RoomVideoFullScreenOverlay.vue";
 import Hls from "hls.js";
 
 const props = defineProps({
@@ -577,6 +578,8 @@ onBeforeUnmount(() => {
         <div class="absolute bottom-3 right-32 z-50">
             <RoomVideoEmojis :playerContainer="playerContainerElement" />
         </div>
+
+        <RoomVideoFullScreenOverlay :showControls="showControls" :isPlaying="currentVideoStats.isPlaying" :playerContainer="playerContainerElement" />
     </div>
 </template>
 
