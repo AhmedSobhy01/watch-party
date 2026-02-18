@@ -35,11 +35,14 @@ const sendMessage = () => {
 
     socketStore.socket.emit("send-message", messageInput.value.trim());
 
-    chatStore.addMessage({
-        username: userStore.username,
-        text: messageInput.value.trim(),
-        time: getCurrentTime(),
-    });
+    chatStore.addMessage(
+        {
+            username: userStore.username,
+            text: messageInput.value.trim(),
+            time: getCurrentTime(),
+        },
+        true,
+    );
 
     messageInput.value = "";
 };

@@ -39,7 +39,18 @@ const toggleChat = () => {
 
 const isFullscreen = ref(false);
 const checkFullscreen = () => {
+    const prev = isFullscreen.value;
     isFullscreen.value = !!document.fullscreenElement;
+
+    // If going to fullscreen, clear unread count
+    if (!prev && isFullscreen.value) {
+        chatStore.setChatVisible(false);
+        chatStore.clearUnreadCount();
+    }
+    // If exiting fullscreen, show regular chat again
+    else if (prev && !isFullscreen.value) {
+        chatStore.setChatVisible(true);
+    }
 };
 
 const notificationSound = ref(null);

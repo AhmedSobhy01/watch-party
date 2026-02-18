@@ -92,11 +92,14 @@ const unbindEvents = () => {
 const sendMessage = (message) => {
     socketStore.socket.emit("send-message", message);
 
-    chatStore.addMessage({
-        username: userStore.username,
-        text: message,
-        time: getCurrentTime(),
-    });
+    chatStore.addMessage(
+        {
+            username: userStore.username,
+            text: message,
+            time: getCurrentTime(),
+        },
+        true,
+    );
 };
 
 // ChatBox Exposed Methods

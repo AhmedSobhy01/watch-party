@@ -8,10 +8,10 @@ export const useChatStore = defineStore("chat", () => {
     const isFullScreenChatOpen = ref(false);
     const isChatVisible = ref(false);
 
-    const addMessage = (message) => {
+    const addMessage = (message, isOwnMessage = false) => {
         messages.value.push(message);
 
-        if (!isChatVisible.value || !isFullScreenChatOpen.value) unreadCount.value++;
+        if (!isOwnMessage && !isChatVisible.value && !isFullScreenChatOpen.value) unreadCount.value++;
     };
 
     const addLogMessage = (log) => {
